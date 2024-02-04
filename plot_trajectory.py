@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
+from matplotlib.lines import Line2D
 import matplotlib.animation as animation
 import math
 import numpy as np
+from compute_error import compute_error
 
 ground_truth_poses = []
 odometry_poses = []
@@ -22,6 +24,7 @@ landmark_array = np.array(landmark_coords_2D)
 gt_array = np.array(ground_truth_poses)
 odo_array = np.array(odometry_poses)
 
+rotation_errors, translation_errors = compute_error(odo_array, gt_array)
 
 patch = Rectangle((0,0),0.3,0.3,
                     angle=math.degrees(0),
@@ -32,7 +35,7 @@ patch = Rectangle((0,0),0.3,0.3,
 patch_max_distance = Circle((0,0), radius=5, facecolor='none', edgecolor='red')
 
 fig = plt.figure()
-ax = fig.add_subplot()
+ax = fig.add_subplot(1,2, 1)
 ax.grid()
 ax.set_aspect('equal')
 ax.set_xlim(-10, 10)
@@ -48,8 +51,22 @@ ax.plot(odo_array[:,0], odo_array[:, 1])
 ax.scatter(landmark_array[:, 0], landmark_array[:, 1],
            facecolors = 'none', edgecolors='g')
 
-def animate(i):
+ax2 = fig.add_subplot(2,2,2)
+ax2.set_xlim(0, len(gt_array))
+ax2.set_ylim(min(rotation_errors), max(rotation_errors))
+ax2.set_title("Relative rotational error")
 
+ax3 = fig.add_subplot(2,2,4)
+ax3.set_xlim(0, len(gt_array))
+ax3.set_ylim(min(translation_errors), max(translation_errors))
+ax3.set_title("Relative ranslational error")
+
+
+rotation_plot, = ax2.plot([], [])
+
+translation_plot, = ax3.plot([], [])
+
+def animate(i):
     angle_rad = gt_array[i,2]
     dx = 0.15*np.cos(angle_rad) - 0.15*np.sin(angle_rad)
     dy = 0.15*np.sin(angle_rad) + 0.15*np.cos(angle_rad)
@@ -58,12 +75,15 @@ def animate(i):
     patch.set_xy((x, y))
     patch.set_angle(math.degrees(angle_rad))
     patch_max_distance.set_center((gt_array[i,0], gt_array[i,1]))
+
+    rotation_plot.set_data([x for x in range(i)],rotation_errors[:i])
+    translation_plot.set_data([x for x in range(i)],translation_errors[:i])
     
     #print(patch._angle)
-    return patch, patch_max_distance
+    return patch, patch_max_distance, rotation_plot, translation_plot
 
 anim = animation.FuncAnimation(fig, animate,
                                frames=len(ground_truth_poses),
                                interval=500,
-                               blit=True)
+                               blit=False)
 plt.show()
