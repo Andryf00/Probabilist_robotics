@@ -3,11 +3,7 @@ from camera import Camera
 from collections import defaultdict
 
 from plotting import *
-
-
-
-
-
+from utils import *
 
 def triangulate(p1, p2, K, T1, T2):
     m1 = K @ np.linalg.inv(T1)[:3]
@@ -26,58 +22,83 @@ def triangulate(p1, p2, K, T1, T2):
     X_homogeneous /= X_homogeneous[-1]
     return X_homogeneous[:-1]
 
-def load_measurements():
-    counter = "00000"
-    new_meas = True
-    measurements = {}
-    while new_meas:
-        dict = {}
-        points = {}
-
-        try: 
-            with open(f"data/measurements/meas-{counter}.dat", "r") as f:
-                for line in f:
-                    splitted_line = line.split()
-                    if len(splitted_line) == 0: 
-                        break
-                
-                    if splitted_line[0] == 'odom_pose:':
-                        dict["pose"] = [float(x) for x in splitted_line[1:]]
-                    elif splitted_line[0] == 'point':
-                        points[int(splitted_line[2])] = [float(x) for x in splitted_line[3:]]
-            dict['points'] = points
-            measurements[int(counter)] = dict
-        except: 
-            return measurements
-        counter = str(int(counter) + 1).zfill(len(counter))
     
-m = load_measurements()
-cam = Camera('data/camera.dat')
-
-triangulated_points = defaultdict(list)
-
-
-for frame_id in range(len(m)-1):
-    current_frame_measurements = m[frame_id]
-    next_frame_measurements = m[frame_id + 1]
-    current_triangs = []
-    for point_id in current_frame_measurements['points'].keys():
-            try:
-                triangulated_point = triangulate(current_frame_measurements['points'][point_id], 
-                                             next_frame_measurements['points'][point_id],
-                                             cam.K,
-                                             cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']),
-                                             cam.camera_pose_from_odometry_pose(next_frame_measurements['pose'])
-                                             )
-                triangulated_points[point_id].append(triangulated_point)
-                current_triangs.append(triangulated_point)
-
-                print(point_id, triangulated_point)
-                
-                
-            except:
-                continue
-
-    if frame_id%5==0:
-        plot_3d(cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']), 0.5, 0.4, 0.5, seen_frames=list(current_frame_measurements['points'].keys()), triangulated_points=current_triangs)
+def reprojection_error(point_3d, point_2d, K, T):
     
+    P = K @  np.linalg.inv(T)[:3]
+    projected_point = P @ np.append(point_3d, 1)
+    projected_point /= projected_point[2]
+    
+    # Compute Euclidean distance between projected and ground truth image points
+    reprojection_error = np.sqrt(np.sum((projected_point[:2] - point_2d)**2, axis=0))
+    
+    # Return mean reprojection error
+    return reprojection_error
+
+def outlier(triangulated_point, point_2d, K, T, z_max):
+    #first of all check if the triangulated point is closer than z_max
+    if np.sqrt(np.sum((triangulated_point-T[:3, 3])**2, axis=0)) > z_max:
+        #print("ABOVE Z_FAR")      
+        pass
+        #return True
+    if (T[:3,:3].T @ (triangulated_point - T[:3, 3]))[2] < 0:
+        #print("BEHIND CAM")
+        return True
+    elif reprojection_error(triangulated_point, point_2d, K, T) > 25:
+        #print("rEPROJECTION ERROR")
+        return True
+    return False
+
+def triangulate_points(m):
+    cam = Camera('data/camera.dat')
+    history = {}
+
+    triangulated_points = defaultdict(list)
+
+
+    for frame_id in range(len(m)-1):
+        current_frame_measurements = m[frame_id]
+        next_frame_measurements = m[frame_id + 1]
+        current_triangs = []
+        filtered_points = []
+        for point_id in current_frame_measurements['points'].keys():
+                if point_id==8:
+                    print(frame_id)
+                    print(frame_id in next_frame_measurements['points'].keys())
+                try:
+                    triangulated_point = triangulate(current_frame_measurements['points'][point_id], 
+                                                next_frame_measurements['points'][point_id],
+                                                cam.K,
+                                                cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']),
+                                                cam.camera_pose_from_odometry_pose(next_frame_measurements['pose'])
+                                                )
+                    if not outlier(triangulated_point,
+                                np.array(current_frame_measurements['points'][point_id]),
+                                cam.K,
+                                cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']),
+                                cam.z_far):
+                        triangulated_points[point_id].append(triangulated_point)
+                        current_triangs.append(triangulated_point)
+                    else:
+                        filtered_points.append(triangulated_point)
+                except KeyError:
+                    continue
+                except Exception as e:
+                    print(e)
+                    continue
+        history[frame_id] = {
+            'pose': cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']),
+            'visible_landmarks': list(current_frame_measurements['points'].keys()),
+            'triangulated_points': current_triangs,
+            'filtered_points': filtered_points
+        }
+        if frame_id%5==0:
+            plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
+            pass
+
+    for point in triangulated_points.keys():
+        points_array = np.array(triangulated_points[point])
+        averaged_point = np.array([np.mean(points_array[:,0]), np.mean(points_array[:,1]), np.mean(points_array[:,2]) ])
+        triangulated_points[point] = averaged_point
+
+    return triangulated_points, history

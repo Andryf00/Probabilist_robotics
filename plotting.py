@@ -8,27 +8,29 @@ from matplotlib.lines import Line2D
 import matplotlib.animation as animation
 import math
 
+from utils import *
+
+def plot_sphere(center, radius, ax, color='b', num_points=100):
+    # Create spherical coordinates
+    u = np.linspace(0, 2 * np.pi, num_points)
+    v = np.linspace(0, np.pi, num_points)
+
+    # Create the meshgrid for spherical coordinates
+    x = center[0] + radius * np.outer(np.cos(u), np.sin(v))
+    y = center[1] + radius * np.outer(np.sin(u), np.sin(v))
+    z = center[2] + radius * np.outer(np.ones(np.size(u)), np.cos(v))
+
+    # Plot the sphere
+    ax.plot_surface(x, y, z, color=color, alpha=0.2)
 
 
-
-
-def plot_3d(T, length, width, height, seen_frames, triangulated_points):
-
+def plot_3d(T, seen_frames, triangulated_points, filtered_points, width = 0.5, length = 0.4, height = 0.5, ):
     matplotlib.use('TkAgg') 
-    landmark_coords_3D = []
-    ground_truth_poses = []
-    with open("data/trajectory.dat", "r") as f:
-        for line in f:
-            splitted_line = line.split()
-            ground_truth_poses.append([float(value) for value in splitted_line[4:]])
-    ground_truth_array = np.array(ground_truth_poses)
+    ground_truth_array, _ = load_trajectory()
     triang_array = np.array(triangulated_points)
+    filtered_array = np.array(filtered_points)
 
-    with open("data/world.dat", "r") as f:
-        for line in f:
-            splitted_line = line.split()
-            landmark_coords_3D.append([float(value) for value in splitted_line[1:]])
-    landmark_array = np.array(landmark_coords_3D)
+    landmark_array = load_landmarks()
     seen_points = landmark_array[seen_frames]
     # Define the vertices of the rectangle in its local coordinate system
     vertices_local = np.array([
@@ -64,7 +66,10 @@ def plot_3d(T, length, width, height, seen_frames, triangulated_points):
     # Plot vertices
     ax.scatter3D(*zip(*vertices_world), c='b')
     ax.scatter3D(seen_points[:, 0], seen_points[:, 1],seen_points[:, 2], c='r')
-    ax.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    try: ax.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    except: pass
+    try: ax.scatter3D(filtered_array[:, 0], filtered_array[:, 1],filtered_array[:, 2], c='y')
+    except: pass
 
     # Set axes labels
     ax.set_xlabel('X')
@@ -89,7 +94,10 @@ def plot_3d(T, length, width, height, seen_frames, triangulated_points):
     # Plot vertices
     ax2.scatter3D(*zip(*vertices_world), c='b')
     ax2.scatter3D(seen_points[:, 0], seen_points[:, 1],seen_points[:, 2], c='r')
-    ax2.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    try: ax2.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    except: pass
+    try: ax2.scatter3D(filtered_array[:, 0], filtered_array[:, 1],filtered_array[:, 2], c='y')
+    except: pass
 
     # Set axes labels
     ax2.set_xlabel('X')
@@ -114,7 +122,10 @@ def plot_3d(T, length, width, height, seen_frames, triangulated_points):
     # Plot vertices
     ax3.scatter3D(*zip(*vertices_world), c='b')
     ax3.scatter3D(seen_points[:, 0], seen_points[:, 1],seen_points[:, 2], c='r')
-    ax3.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    try: ax3.scatter3D(triang_array[:, 0], triang_array[:, 1],triang_array[:, 2], c='g')
+    except: pass
+    try: ax3.scatter3D(filtered_array[:, 0], filtered_array[:, 1],filtered_array[:, 2], c='y')
+    except: pass
 
     # Set axes labels
     ax3.set_xlabel('X')
@@ -125,8 +136,11 @@ def plot_3d(T, length, width, height, seen_frames, triangulated_points):
     ax3.set_xlim(-10, 10)
     ax3.set_ylim(-10, 10)
     ax3.set_zlim(0, 10)
-    ax3.plot(ground_truth_array[:, 0], ground_truth_array[:, 1], [0 for _ in range(len(ground_truth_poses))])
+    ax3.plot(ground_truth_array[:, 0], ground_truth_array[:, 1], [0 for _ in range(len(ground_truth_array))])
     ax3.view_init(elev=90, azim=0)
+    plot_sphere(center = T[:3, 3], radius=5, ax=ax)
+    plot_sphere(center = T[:3, 3], radius=5, ax=ax2)
+    plot_sphere(center = T[:3, 3], radius=5, ax=ax3)
 
     manager = plt.get_current_fig_manager()
     manager.full_screen_toggle()
@@ -144,24 +158,8 @@ def plot_3d(T, length, width, height, seen_frames, triangulated_points):
 
     plt.show()
 
-def animated_trajectories():
-    ground_truth_poses = []
-    odometry_poses = []
+def animate_trajectories(gt_array, odo_array, landmark_array):
 
-    with open("data/trajectory.dat", "r") as f:
-        for line in f:
-            splitted_line = line.split()
-            ground_truth_poses.append([float(value) for value in splitted_line[4:]])
-            odometry_poses.append([float(value) for value in splitted_line[1:4]])
-
-    landmark_coords_2D = []
-    with open("data/world.dat", "r") as f:
-        for line in f:
-            splitted_line = line.split()
-            landmark_coords_2D.append([float(value) for value in splitted_line[1:]])
-    landmark_array = np.array(landmark_coords_2D)
-    gt_array = np.array(ground_truth_poses)
-    odo_array = np.array(odometry_poses)
 
     rotation_errors, translation_errors = compute_error(odo_array, gt_array)
 
@@ -222,7 +220,7 @@ def animated_trajectories():
         return patch, patch_max_distance, rotation_plot, translation_plot
 
     anim = animation.FuncAnimation(fig, animate,
-                                frames=len(ground_truth_poses),
+                                frames=len(gt_array),
                                 interval=500,
                                 blit=False)
     plt.show()
