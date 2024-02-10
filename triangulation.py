@@ -93,7 +93,7 @@ def triangulate_points(m):
             'filtered_points': filtered_points
         }
         if frame_id%5==0:
-            plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
+            #plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
             pass
 
     for point in triangulated_points.keys():
@@ -101,4 +101,4 @@ def triangulate_points(m):
         averaged_point = np.array([np.mean(points_array[:,0]), np.mean(points_array[:,1]), np.mean(points_array[:,2]) ])
         triangulated_points[point] = averaged_point
 
-    return triangulated_points, history
+    return np.array(list(triangulated_points.values())), history
