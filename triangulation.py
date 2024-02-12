@@ -101,4 +101,4 @@ def triangulate_points(m):
         averaged_point = np.array([np.mean(points_array[:,0]), np.mean(points_array[:,1]), np.mean(points_array[:,2]) ])
         triangulated_points[point] = averaged_point
 
-    return np.array(list(triangulated_points.values())), history
+    return triangulated_points, history

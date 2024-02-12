@@ -4,6 +4,8 @@ class LS_solver():
     def __init__(self, poses, landmarks) -> None:
         self.Xr = np.array(poses)
         self.Xl = np.array(landmarks)
+        self.pos_dim = 3
+        self.l_dim = 3
 
     def project(self, point_3d, K, T):
     
@@ -13,8 +15,22 @@ class LS_solver():
 
         return projected_point[:2]
     
-    def measurement_function():
-        pass
+    def normalize(self,theta):
+        s = np.sin(theta)
+        c = np.cos(theta)
+        return np.arctan2(s,c)
+    
+    def rotation2Dgradient(self, theta):
+        s=np.sin(theta)
+        c=np.cos(theta)
+        Rp=np.array([[-s, -c],
+        [c, -s,]])
+        Rp = np.array([
+            [s, -c, 0],
+            [0,0,0],
+            [c,s,0]
+        ])
+        return Rp
 
     def skew(self, p):
         m = np.zeros((3,3))
@@ -26,10 +42,10 @@ class LS_solver():
         m[2,1] = p[0]
         return m
 
-    def J_icp(self, p):
-        J=np.zeros((3,6))
-        J[:3,:3]=np.eye(3)
-        J[:3,3:6]=self.skew(-p)
+    def J_icp(self, p, theta, cam):
+        J=np.zeros((3,3))
+        J[:,:2]=np.array([[1,0],[0,1],[0,0]])
+        J[:,2]=self.rotation2Dgradient(theta) @ p
         return J
     
 
@@ -57,10 +73,10 @@ class LS_solver():
         # TODO: fill the jacobians but it's already done later no???
         inverse_z = 1/p_projected[2]
         inverse_square_z = inverse_z * inverse_z
-        J_proj = [[inverse_z, 0, -p_projected[1] * inverse_square_z],
-                   [ 0, inverse_z, -p_projected[2] * inverse_square_z]]
+        J_proj = np.array([[inverse_z, 0, -p_projected[1] * inverse_square_z],
+                   [ 0, inverse_z, -p_projected[2] * inverse_square_z]])
 
-        Jicp = self.J_icp(p_camera_frame)
+        Jicp = self.J_icp(p_camera_frame, Xr[2], cam)
 
         Jr = J_proj @ cam.K @ Jicp
         Jl = J_proj @ cam.K @ T[:3,:3]
@@ -82,17 +98,20 @@ class LS_solver():
 #   XL: the landmarks obtained by applying the perturbation
     def boxPlus(self, XR, XL, num_poses, num_landmarks, dx):
         for pose_index in range(num_poses):
-            dxr=self.dx[pose_index*3:(pose_index+1)*3]
-            XR[:,:,pose_index][:2]+=dxr[:2]
-            XR[:,:,pose_index][:3]+=dxr[:3] #TODO normalize this
+            dxr=dx[pose_index*self.pos_dim:(pose_index+1)*self.pos_dim]
+            XR[pose_index, :][:2]+=dxr[:2]
+            XR[pose_index, :][2]+=dxr[2] #TODO normalize this
         for landmark_index in range(num_landmarks):
             
-            dxl=dx[num_poses*3+landmark_index*3:num_poses*3+(landmark_index+1)*3]
-            XL[:,landmark_index]+=dxl
+            dxl=dx[num_poses*self.pos_dim+landmark_index*self.l_dim:num_poses*self.pos_dim+(landmark_index+1)*self.l_dim]
+            if type(XL[landmark_index]) == list: continue
+            XL[landmark_index]+=dxl
+        
+        return XR, XL
 
 
 # implementation of the optimization loop with robust kernel
-# applies a perturbation to a set of landmarks and robot poses
+# applies a perturbation to a set of lanpositiondmarks and robot poses
 # input:
 #   XR: the initial robot poses (4x4xnum_poses: array of homogeneous matrices)
 #   XL: the initial landmark estimates (3xnum_landmarks matrix of landmarks)
@@ -120,15 +139,17 @@ class LS_solver():
                                 damping
                                 ):
         # size of the linear system
-        system_size=3*num_poses + 3*num_landmarks; 
-        for iteration in range(num_iterations):
+        system_size=self.pos_dim*num_poses + self.l_dim*num_landmarks; 
+        import tqdm
+        for iteration in tqdm.tqdm(range(num_iterations)):
             H=np.zeros((system_size, system_size))
-            b=np.zeros((system_size,1))
+            b=np.zeros((system_size))
             for pose_index in Z.keys():
                 for landmark_index in Z[pose_index]['points'].keys():
                     z = Z[pose_index]['points'][landmark_index]
                     Xr=XR[pose_index, :]
-                    Xl=XL[landmark_index, :]
+                    Xl=XL[landmark_index]
+                    if type(Xl) == list: continue
                     e,Jr,Jl = self.errorAndJacobian(Xr, Xl, z, cam)
                     
                     omega =  np.eye(2)
@@ -138,31 +159,30 @@ class LS_solver():
                     br = Jr.T @ omega @ e
                     bl = Jl.T @ omega @ e
 
-                    pose_matrix_index=3*pose_index
-                    landmark_matrix_index=3*num_poses + 3*landmark_index
+                    pose_matrix_index=self.pos_dim*pose_index
+                    landmark_matrix_index=self.pos_dim*num_poses + self.l_dim*landmark_index
 
-                    H[pose_matrix_index:pose_matrix_index+3,
-                    pose_matrix_index:pose_matrix_index+3]+=Hrr
+                    H[pose_matrix_index:pose_matrix_index+self.pos_dim,
+                    pose_matrix_index:pose_matrix_index+self.pos_dim]+=Hrr
 
-                    H[pose_matrix_index:pose_matrix_index+3,
-                    landmark_matrix_index:landmark_matrix_index+3]+=Hrl
+                    H[pose_matrix_index:pose_matrix_index+self.pos_dim,
+                    landmark_matrix_index:landmark_matrix_index+self.l_dim]+=Hrl
+                    H[landmark_matrix_index:landmark_matrix_index+self.l_dim,
+                    landmark_matrix_index:landmark_matrix_index+self.l_dim]+=Hll
 
-                    H[landmark_matrix_index:landmark_matrix_index+3,
-                    landmark_matrix_index:landmark_matrix_index+3]+=Hll
+                    H[landmark_matrix_index:landmark_matrix_index+self.l_dim,
+                    pose_matrix_index:pose_matrix_index+self.pos_dim]+=Hrl.T
 
-                    H[landmark_matrix_index:landmark_matrix_index+3,
-                    pose_matrix_index:pose_matrix_index+3]+=Hrl.T
-
-                    b[pose_matrix_index:pose_matrix_index+3]+=br
-                    b[landmark_matrix_index:landmark_matrix_index+3]+=bl
+                    b[pose_matrix_index:pose_matrix_index+self.pos_dim]+=br
+                    b[landmark_matrix_index:landmark_matrix_index+self.l_dim]+=bl
 
             H+=np.eye(system_size)*damping
-            dx=np.zeros(system_size,1)
+            dx=np.zeros(system_size)
             
             # we solve the linear system, blocking the first pose
             # this corresponds to "remove" from H and b the locks
             # of the 1st pose, while solving the system
+            dx[self.pos_dim + 1:] = -np.linalg.solve(H[self.pos_dim + 1:, self.pos_dim + 1:], b[self.pos_dim + 1:])
 
-            dx[3+1:]=-(H[3+1:,3+1:]/b[3+1:,1])
             XR, XL=self.boxPlus(XR,XL,num_poses, num_landmarks, dx)
         return XR, XL
