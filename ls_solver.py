@@ -1,4 +1,6 @@
 import numpy as np
+import sympy as sp
+
 
 class LS_solver():
     def __init__(self, poses, landmarks) -> None:
@@ -47,8 +49,86 @@ class LS_solver():
         J[:,:2]=np.array([[1,0],[0,1],[0,0]])
         J[:,2]=self.rotation2Dgradient(theta) @ p
         return J
-    
+    def J_icp2(self, pose, p, cam):
 
+        # Define symbols
+        theta, x, y, xl, yl, zl = sp.symbols('theta x y xl yl zl')
+
+        # Define the symbolic matrix
+        symbolic_matrix = sp.Matrix([[xl], [yl], [zl], [1]])
+
+        # Define the matrix
+        matrix = sp.Matrix([
+            [sp.sin(theta), -sp.cos(theta), 0, 0],
+            [0, 0, -1, 0],
+            [sp.cos(theta), sp.sin(theta), 0, 0],
+            #[0.2*sp.cos(theta) + x, 0.2*sp.sin(theta) + y, 0, 1]
+        ])
+
+        # Multiply the matrix by the symbolic matrix
+        result_matrix = cam.K * matrix * symbolic_matrix
+
+
+        # Substitute variables with specific values
+        x_val = pose[0]
+        y_val = pose[1]
+        theta_val = pose[2]
+        variables = [x, y, theta]
+        derivatives_unsub = [result_matrix.diff(var) for var in variables]
+
+        substitutions = {xl: p[0], yl: p[1], zl: p[2]}
+        result_matrix_substituted = result_matrix.subs(substitutions)
+        derivatives = [result_matrix_substituted.diff(var) for var in variables]
+
+        # Convert derivatives to callable functions
+        func_derivatives = [sp.lambdify((x, y, theta), derivative, 'numpy') for derivative in derivatives]
+        result_arrays = [func(x_val, y_val, theta_val) for func in func_derivatives]
+
+        # Stack the derivatives next to each other
+        J_icp_r = np.concatenate(result_arrays, axis=1)
+
+
+        # Substitute variables with specific values
+        xl_val = p[0]
+        yl_val = p[1]
+        zl_val = p[2]
+        variables = [xl, yl, zl]
+        derivatives_unsub2 = [result_matrix.diff(var) for var in variables]
+        substitutions = {x: pose[0], y: pose[1], theta: pose[2]}
+        result_matrix_substituted = result_matrix.subs(substitutions)
+        derivatives = [result_matrix_substituted.diff(var) for var in variables]
+
+        # Convert derivatives to callable functions
+        func_derivatives = [sp.lambdify((xl, yl, zl), derivative, 'numpy') for derivative in derivatives]
+        result_arrays = [func(xl_val, yl_val, zl_val) for func in func_derivatives]
+        J_icp_l = np.concatenate(result_arrays, axis=1)
+        print(derivatives_unsub, derivatives_unsub2)
+
+        return J_icp_r, J_icp_l
+        
+    def J_icp3(self, pose, p, cam):
+        x = pose[0]
+        y = pose[1]
+        theta = pose[2]
+        xl = p[0]
+        yl = p[1]
+        zl = p[2]
+        J_icp_r = np.array([
+                [0,0,0],
+                [0,0,0],
+                [xl*(-320.0*np.sin(theta) + 180.0*np.cos(theta)) + yl*(180.0*np.sin(theta) + 320.0*np.cos(theta)),
+                                                        -240.0*xl*np.sin(theta) + 240.0*yl*np.cos(theta),
+                                                            -1.0*xl*np.sin(theta) + 1.0*yl*np.cos(theta)]])
+
+        J_icp_l = np.array([[180.0*np.sin(theta) + 320.0*np.cos(theta),
+                        240.0*np.cos(theta),
+                    1.0*np.cos(theta)],[320.0*np.sin(theta) - 180.0*np.cos(theta),
+                        240.0*np.sin(theta),
+                        1.0*np.sin(theta)],
+        [     0,
+        -180.0,
+            0]]) 
+        return J_icp_r, J_icp_l
     # error and jacobian of a measured landmark
     # input:
     #   Xr: the robot pose (4x4 homogeneous matrix)
@@ -62,7 +142,8 @@ class LS_solver():
     #       landmark
     def errorAndJacobian(self, Xr, Xl, z, cam):
         
-        T = np.linalg.inv(cam.camera_pose_from_odometry_pose(Xr))
+        T_noninv = cam.camera_pose_from_odometry_pose(Xr)
+        T = np.linalg.inv(T_noninv)
         z_hat = self.project(Xl, cam.K, T); #prediction
         e = np.zeros((2,1))
         Jl = np.zeros((2,3))
@@ -77,9 +158,10 @@ class LS_solver():
                    [ 0, inverse_z, -p_projected[2] * inverse_square_z]])
 
         Jicp = self.J_icp(p_camera_frame, Xr[2], cam)
+        Jicp_r, J_icp_l = self.J_icp3( Xr, Xl, cam)
 
-        Jr = J_proj @ cam.K @ Jicp
-        Jl = J_proj @ cam.K @ T[:3,:3]
+        Jr = J_proj @ cam.K @ Jicp_r
+        Jl = J_proj @ cam.K @ J_icp_l
 
         return e, Jr, Jl
     
@@ -100,7 +182,7 @@ class LS_solver():
         for pose_index in range(num_poses):
             dxr=dx[pose_index*self.pos_dim:(pose_index+1)*self.pos_dim]
             XR[pose_index, :][:2]+=dxr[:2]
-            XR[pose_index, :][2]+=dxr[2] #TODO normalize this
+            XR[pose_index, :][2]=self.normalize(XR[pose_index, :][2]+dxr[2]) #TODO normalize this
         for landmark_index in range(num_landmarks):
             
             dxl=dx[num_poses*self.pos_dim+landmark_index*self.l_dim:num_poses*self.pos_dim+(landmark_index+1)*self.l_dim]
@@ -151,7 +233,6 @@ class LS_solver():
                     Xl=XL[landmark_index]
                     if type(Xl) == list: continue
                     e,Jr,Jl = self.errorAndJacobian(Xr, Xl, z, cam)
-                    
                     omega =  np.eye(2)
                     Hrr = Jr.T @ omega @ Jr
                     Hrl = Jr.T @ omega @ Jl

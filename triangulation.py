@@ -37,10 +37,10 @@ def reprojection_error(point_3d, point_2d, K, T):
 
 def outlier(triangulated_point, point_2d, K, T, z_max):
     #first of all check if the triangulated point is closer than z_max
-    if np.sqrt(np.sum((triangulated_point-T[:3, 3])**2, axis=0)) > z_max:
+    if (T[:3,:3].T @ (triangulated_point - T[:3, 3]))[2]> z_max:
         #print("ABOVE Z_FAR")      
-        pass
-        #return True
+        
+        return True
     if (T[:3,:3].T @ (triangulated_point - T[:3, 3]))[2] < 0:
         #print("BEHIND CAM")
         return True
