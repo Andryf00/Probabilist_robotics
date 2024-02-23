@@ -1,7 +1,7 @@
 import numpy as np
 
 class Camera():
-    def __init__(self, filename) -> None:
+    def __init__(self, filename='data/camera.dat') -> None:
         with open(filename, 'r') as file:
             next(file)  
             self.K = np.array([[float(x) for x in next(file).split()] for _ in range(3)])

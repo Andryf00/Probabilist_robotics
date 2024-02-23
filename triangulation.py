@@ -5,6 +5,10 @@ from collections import defaultdict
 from plotting import *
 from utils import *
 
+
+import numpy as np
+from scipy.optimize import minimize
+
 def triangulate(p1, p2, K, T1, T2):
     m1 = K @ np.linalg.inv(T1)[:3]
     m2 = K @ np.linalg.inv(T2)[:3]
@@ -31,7 +35,6 @@ def reprojection_error(point_3d, point_2d, K, T):
     
     # Compute Euclidean distance between projected and ground truth image points
     reprojection_error = np.sqrt(np.sum((projected_point[:2] - point_2d)**2, axis=0))
-    
     # Return mean reprojection error
     return reprojection_error
 
@@ -95,10 +98,10 @@ def triangulate_points(m):
         if frame_id%5==0:
             #plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
             pass
-
-    for point in triangulated_points.keys():
+    averaged_triangulated_points = {}
+    for point in sorted(triangulated_points.keys()):
         points_array = np.array(triangulated_points[point])
         averaged_point = np.array([np.mean(points_array[:,0]), np.mean(points_array[:,1]), np.mean(points_array[:,2]) ])
-        triangulated_points[point] = averaged_point
+        averaged_triangulated_points[point] = averaged_point
 
-    return triangulated_points, history
+    return averaged_triangulated_points, history

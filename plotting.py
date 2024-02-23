@@ -158,7 +158,7 @@ def plot_3d(T, seen_frames, triangulated_points, filtered_points, width = 0.5, l
 
     plt.show()
 
-def animate_trajectories(gt_array, odo_array, landmark_array):
+def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_land, iteration = 'latest'):
 
 
     rotation_errors, translation_errors = compute_error(odo_array, gt_array)
@@ -172,7 +172,7 @@ def animate_trajectories(gt_array, odo_array, landmark_array):
     patch_max_distance = Circle((0,0), radius=5, facecolor='none', edgecolor='red')
 
     fig = plt.figure()
-    ax = fig.add_subplot(1,2, 1)
+    ax = fig.add_subplot(2,2, 1)
     ax.grid()
     ax.set_aspect('equal')
     ax.set_xlim(-10, 10)
@@ -183,11 +183,9 @@ def animate_trajectories(gt_array, odo_array, landmark_array):
 
 
 
-    ax.plot(gt_array[:,0], gt_array[:, 1])
-    ax.plot(odo_array[:,0], odo_array[:, 1])
-    ax.scatter(landmark_array[:, 0], landmark_array[:, 1],
-            facecolors = 'none', edgecolors='g')
-
+    ax.plot(gt_array[:,0], gt_array[:, 1], color = 'c')
+    ax.plot(odo_array[:,0], odo_array[:, 1], color = 'orange')
+    ax.plot(corrected[:,0], corrected[:, 1], color = 'green')
     ax2 = fig.add_subplot(2,2,2)
     ax2.set_xlim(0, len(gt_array))
     ax2.set_ylim(min(rotation_errors), max(rotation_errors))
@@ -198,6 +196,16 @@ def animate_trajectories(gt_array, odo_array, landmark_array):
     ax3.set_ylim(min(translation_errors), max(translation_errors))
     ax3.set_title("Relative ranslational error")
 
+
+    ax4 = fig.add_subplot(2,2, 3)
+    ax4.scatter(landmark_array[:, 0], landmark_array[:, 1],
+            facecolors = 'none', edgecolors='g')
+    ax4.scatter(pred_land[:, 0], pred_land[:, 1],
+            facecolors = 'none', edgecolors='r')
+
+
+    plt.savefig(f'plots_gt_l/plot{str(iteration)}.png')
+    return
 
     rotation_plot, = ax2.plot([], [])
 
