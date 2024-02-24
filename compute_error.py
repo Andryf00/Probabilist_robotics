@@ -27,3 +27,10 @@ def compute_error(trajectory, gt):
         translation_errors.append(np.sqrt(error_t[0, 2]**2 + error_t[1,2]**2))
 
     return rotation_errors, translation_errors
+
+def landmark_error(gt_l, pred_l):
+    total_e = 0
+    for landmark_id in pred_l.keys():
+        e = np.array(gt_l[landmark_id] - pred_l[landmark_id])
+        total_e += e.T@e
+    return (total_e**0.5)/len(pred_l)

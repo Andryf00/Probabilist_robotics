@@ -47,7 +47,7 @@ def outlier(triangulated_point, point_2d, K, T, z_max):
     if (T[:3,:3].T @ (triangulated_point - T[:3, 3]))[2] < 0:
         #print("BEHIND CAM")
         return True
-    elif reprojection_error(triangulated_point, point_2d, K, T) > 25:
+    elif reprojection_error(triangulated_point, point_2d, K, T) > 10:
         #print("rEPROJECTION ERROR")
         return True
     return False

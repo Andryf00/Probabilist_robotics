@@ -204,7 +204,7 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
             facecolors = 'none', edgecolors='r')
 
 
-    plt.savefig(f'plots_gt_l/plot{str(iteration)}.png')
+    plt.savefig(f'plots_boh/plot{str(iteration)}.png')
     return
 
     rotation_plot, = ax2.plot([], [])

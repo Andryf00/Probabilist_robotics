@@ -3,22 +3,25 @@ from plotting import *
 from ls_solver import LS_solver
 from triangulation import triangulate_points
 from camera import Camera
+from compute_error import *
 def main():
     cam = Camera()
-    measurements = load_measurements(trajectory = 'gt_pose')
+    measurements = load_measurements(trajectory = 'odom_pose')
 
     gt_traj, odo_traj = load_trajectory()
     landmarks = load_landmarks()
     #triangulated_points, history = triangulate_points(measurements)
     triangulated_points, history = triangulate_points(measurements)
-
     for frame_id in history.keys():
         break
         plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
             
     solver = LS_solver()
-    XR, XL = solver.doBundleAdjustment(XR=np.array(odo_traj), XL=triangulated_points, Z=measurements, cam=cam, num_poses=200, num_landmarks=1000, num_iterations=100, damping=1, gt = gt_traj,odo= odo_traj,landmarks= landmarks)
+    XR, XL = solver.doBundleAdjustment(damping=0.00001, XR=np.array(odo_traj), XL=triangulated_points, Z=measurements, cam=cam, num_poses=200, num_landmarks=1000, num_iterations=200,  gt = gt_traj,odo= odo_traj,landmarks= landmarks)
+    err = landmark_error(landmarks, XL)
+    print(f"Landmark_error: {err}")
     for i in range(200):
+        break
         print(gt_traj[i], XR[i])
     predicted_l = []
     for l in XL.keys():
@@ -26,7 +29,7 @@ def main():
     
     animate_trajectories(gt_traj, odo_traj, XR, landmarks, np.array(predicted_l))    
     print("DONE")
-    f = open("final_log_gt_l.txt", 'w')
+    f = open("final_log_damping.txt", 'w')
 
     for pose_index in range(200):
         pose = XR[pose_index]
@@ -36,7 +39,7 @@ def main():
         for l_index in visible_l.keys():
             try: l_3d = XL[l_index]
             except: continue
-            z_hat = solver.project(l_3d, cam.K, T)
+            z_hat, _ = solver.project(l_3d, cam.K, T)
             z = visible_l[l_index]
             e =  z-z_hat
             f.write(f"{l_index}: z {z} , z_hat {z_hat}, error {e}, gt_l {landmarks[l_index]}, pred_l {l_3d}\n")
