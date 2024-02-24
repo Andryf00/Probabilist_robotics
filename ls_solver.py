@@ -149,7 +149,7 @@ class LS_solver():
                     w = 1
                     if (chi>kernel_threshold):
                         #pass
-                        w = w/kernel_threshold
+                        w = w/(kernel_threshold*3)
                     omega = w* np.eye(2)
                     Hrr = Jr.T @ omega @ Jr
                     Hrl = Jr.T @ omega @ Jl
@@ -196,6 +196,6 @@ class LS_solver():
             for l in XL.keys():
                 predicted_l.append(XL[l])
             print(chi_tot)
-            animate_trajectories(gt,odo , XR, landmarks, np.array(predicted_l), iteration)  
+            animate_trajectories(gt,odo , XR, landmarks[list(XL.keys())], np.array(predicted_l), iteration)  
    
         return XR, XL

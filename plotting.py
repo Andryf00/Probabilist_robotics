@@ -158,7 +158,7 @@ def plot_3d(T, seen_frames, triangulated_points, filtered_points, width = 0.5, l
 
     plt.show()
 
-def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_land, iteration = 'latest'):
+def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_land, iteration = 'latest', animate_bool=False):
 
 
     rotation_errors, translation_errors = compute_error(odo_array, gt_array)
@@ -171,7 +171,7 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
 
     patch_max_distance = Circle((0,0), radius=5, facecolor='none', edgecolor='red')
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(14, 10))
     ax = fig.add_subplot(2,2, 1)
     ax.grid()
     ax.set_aspect('equal')
@@ -183,9 +183,10 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
 
 
 
-    ax.plot(gt_array[:,0], gt_array[:, 1], color = 'c')
-    ax.plot(odo_array[:,0], odo_array[:, 1], color = 'orange')
-    ax.plot(corrected[:,0], corrected[:, 1], color = 'green')
+    ax.plot(gt_array[:,0], gt_array[:, 1], color = 'c', label = 'gt_traj')
+    ax.plot(odo_array[:,0], odo_array[:, 1], color = 'orange', label = 'odom_traj')
+    ax.plot(corrected[:,0], corrected[:, 1], color = 'green', label = 'corrected_traj')
+    ax.legend()
     ax2 = fig.add_subplot(2,2,2)
     ax2.set_xlim(0, len(gt_array))
     ax2.set_ylim(min(rotation_errors), max(rotation_errors))
@@ -198,14 +199,15 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
 
 
     ax4 = fig.add_subplot(2,2, 3)
+    ax4.set_aspect('equal')
     ax4.scatter(landmark_array[:, 0], landmark_array[:, 1],
-            facecolors = 'none', edgecolors='g')
+            facecolors = 'none', edgecolors='g', label = 'gt_lm')
     ax4.scatter(pred_land[:, 0], pred_land[:, 1],
-            facecolors = 'none', edgecolors='r')
-
+            facecolors = 'none', edgecolors='r', label = 'pred_lm')
+    plt.legend()
 
     plt.savefig(f'plots_boh/plot{str(iteration)}.png')
-    return
+    if not animate_bool: return
 
     rotation_plot, = ax2.plot([], [])
 
@@ -230,5 +232,6 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
     anim = animation.FuncAnimation(fig, animate,
                                 frames=len(gt_array),
                                 interval=500,
-                                blit=False)
+                                blit=False)  
+    anim.save(f"animation.gif",writer='pillow',fps=20, dpi=200)
     plt.show()
