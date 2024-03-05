@@ -161,7 +161,6 @@ def plot_3d(T, seen_frames, triangulated_points, filtered_points, width = 0.5, l
 def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_land, iteration = 'latest', animate_bool=False):
 
 
-    rotation_errors, translation_errors = compute_error(odo_array, gt_array)
 
     patch = Rectangle((0,0),0.3,0.3,
                         angle=math.degrees(0),
@@ -187,15 +186,6 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
     ax.plot(odo_array[:,0], odo_array[:, 1], color = 'orange', label = 'odom_traj')
     ax.plot(corrected[:,0], corrected[:, 1], color = 'green', label = 'corrected_traj')
     ax.legend()
-    ax2 = fig.add_subplot(2,2,2)
-    ax2.set_xlim(0, len(gt_array))
-    ax2.set_ylim(min(rotation_errors), max(rotation_errors))
-    ax2.set_title("Relative rotational error")
-
-    ax3 = fig.add_subplot(2,2,4)
-    ax3.set_xlim(0, len(gt_array))
-    ax3.set_ylim(min(translation_errors), max(translation_errors))
-    ax3.set_title("Relative ranslational error")
 
 
     ax4 = fig.add_subplot(2,2, 3)
@@ -206,9 +196,19 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
             facecolors = 'none', edgecolors='r', label = 'pred_lm')
     plt.legend()
 
-    plt.savefig(f'plots_boh/plot{str(iteration)}.png')
+    plt.savefig(f'plots_best/plot_{str(iteration)}.png')
     if not animate_bool: return
 
+    rotation_errors, translation_errors = compute_error(odo_array, gt_array)
+    ax2 = fig.add_subplot(2,2,2)
+    ax2.set_xlim(0, len(gt_array))
+    ax2.set_ylim(min(rotation_errors)-2, max(rotation_errors)+2)
+    ax2.set_title("Relative rotational error")
+
+    ax3 = fig.add_subplot(2,2,4)
+    ax3.set_xlim(0, len(gt_array))
+    ax3.set_ylim(min(translation_errors)-2, max(translation_errors)+2)
+    ax3.set_title("Relative ranslational error")
     rotation_plot, = ax2.plot([], [])
 
     translation_plot, = ax3.plot([], [])

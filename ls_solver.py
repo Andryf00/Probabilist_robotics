@@ -2,6 +2,7 @@ import numpy as np
 import sympy as sp
 from plotting import *
 
+from collections import defaultdict
 
 class LS_solver():
     def __init__(self) -> None:
@@ -98,6 +99,7 @@ class LS_solver():
                                 gt, odo, landmarks,
                                 kernel_threshold = 25
                                 ):
+        #patience system, if chi_tot stops improving we stop iterating
         patience = 5
         no_imp = 0
         breakable = False
@@ -111,7 +113,6 @@ class LS_solver():
             log = False
             if iteration == 39 and False:
                 log = True
-            from collections import defaultdict
             errors = defaultdict(int)
             chi_tot = 0
             H=np.zeros((system_size, system_size))
@@ -134,7 +135,7 @@ class LS_solver():
                     errors[landmark_index] += chi
                     z_hat, behind = self.project(Xl, cam.K, T) #prediction
                     if behind:
-                        print(pose_index, landmark_index)
+                        #print(pose_index, landmark_index)
                         continue
                     if log:
                         f.write(f"{landmark_index}: z {z} , z_hat {z_hat}, error {e}, gt_l {landmarks[landmark_index]}, pred_l {Xl}\n")

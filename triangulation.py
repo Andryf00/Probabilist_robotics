@@ -65,9 +65,6 @@ def triangulate_points(m):
         current_triangs = []
         filtered_points = []
         for point_id in current_frame_measurements['points'].keys():
-                if point_id==8:
-                    print(frame_id)
-                    print(frame_id in next_frame_measurements['points'].keys())
                 try:
                     triangulated_point = triangulate(current_frame_measurements['points'][point_id], 
                                                 next_frame_measurements['points'][point_id],
@@ -75,6 +72,7 @@ def triangulate_points(m):
                                                 cam.camera_pose_from_odometry_pose(current_frame_measurements['pose']),
                                                 cam.camera_pose_from_odometry_pose(next_frame_measurements['pose'])
                                                 )
+                    #check if the triangulated point is acceptable
                     if not outlier(triangulated_point,
                                 np.array(current_frame_measurements['points'][point_id]),
                                 cam.K,
@@ -98,6 +96,8 @@ def triangulate_points(m):
         if frame_id%5==0:
             #plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
             pass
+    
+    #for each landmark we have multiple triangulated points. we obtain the final triangulated landmark position by averaging all the triangulated points corresponding to that landmark
     averaged_triangulated_points = {}
     for point in sorted(triangulated_points.keys()):
         points_array = np.array(triangulated_points[point])
