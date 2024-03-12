@@ -1,5 +1,4 @@
 import numpy as np
-import sympy as sp
 from plotting import *
 
 from collections import defaultdict

@@ -8,12 +8,18 @@ def main():
     cam = Camera()
 
     measurements = load_measurements(trajectory = 'odom_pose') #load the measurements for each pose
+    print("MEASUREMENTS: ")
+    for i in measurements.keys():
+        print(measurements[i])
+        print("\n")
     gt_traj, odo_traj = load_trajectory() 
 
     landmarks = load_landmarks() #load landmarks 3d position from world.dat
 
     triangulated_points, history = triangulate_points(measurements)
-    
+    print("TRIANG")
+    for i in triangulated_points.keys():
+        print(triangulated_points[i])
     # if you want to see the result of triangulation for each step uncomment break
     for frame_id in history.keys():
         break
@@ -50,9 +56,6 @@ def main():
             e =  z-z_hat
             f.write(f"{l_index}: z {z} , z_hat {z_hat}, error {e}, gt_l {landmarks[l_index]}, pred_l {l_3d}\n")
             #print(z,z_hat,e)
-            if np.sum(np.abs(e))>1:
-                #pass
-                print("ERROR")
 
     #animate_trajectories(gt_traj, odo_traj, XR, landmarks[list(XL.keys())], np.array(predicted_l), animate_bool=True)    
 
