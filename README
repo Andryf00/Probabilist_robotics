@@ -35,7 +35,7 @@ Evaluation of your poses:
 Evaluate your solution comparing it with the gt using the delta between poses
 
 For example, suppose we these two consecutive poses
-T_0
+T_0 
 T_1 
 
 - compute the relative motion rel_T = inv(T_0)*T_1

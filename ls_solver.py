@@ -96,7 +96,7 @@ class LS_solver():
                                 num_iterations, 
                                 damping,
                                 gt, odo, landmarks,
-                                kernel_threshold = 25
+                                kernel_threshold = 16
                                 ):
         #patience system, if chi_tot stops improving we stop iterating
         patience = 5
@@ -149,7 +149,7 @@ class LS_solver():
                     w = 1
                     if (chi>kernel_threshold):
                         #pass
-                        w = w/(kernel_threshold*3)
+                        w = w/(kernel_threshold*10)
                     omega = w* np.eye(2)
                     Hrr = Jr.T @ omega @ Jr
                     Hrl = Jr.T @ omega @ Jl

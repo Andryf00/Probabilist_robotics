@@ -1,0 +1,2 @@
+damping 0.5
+kernel threshold 25

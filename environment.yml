@@ -12,7 +12,7 @@ dependencies:
   - aiosignal=1.2.0=pyhd3eb1b0_0
   - alabaster=0.7.12=pyhd3eb1b0_0
   - anaconda-anon-usage=0.4.2=py311hfc0e8ea_0
-  - anaconda-catalogs=0.2.0=py311h06a4308_0
+  - anaconda-=0.2.0=py311h06a4308_0
   - anaconda-client=1.12.1=py311h06a4308_0
   - anaconda-cloud-auth=0.1.4=py311h06a4308_0
   - anaconda-navigator=2.5.0=py311h06a4308_0

@@ -7,7 +7,6 @@ from utils import *
 
 
 import numpy as np
-from scipy.optimize import minimize
 
 def triangulate(p1, p2, K, T1, T2):
     m1 = K @ np.linalg.inv(T1)[:3]
