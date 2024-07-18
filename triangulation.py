@@ -59,11 +59,13 @@ def triangulate_points(m):
 
 
     for frame_id in range(len(m)-1):
+        #find the matching points in the current and next frame
         current_frame_measurements = m[frame_id]
         next_frame_measurements = m[frame_id + 1]
         current_triangs = []
         filtered_points = []
         for point_id in current_frame_measurements['points'].keys():
+                #if we get a KeyError it means that the point is not visible in the next frame, so we move to the next point
                 try:
                     triangulated_point = triangulate(current_frame_measurements['points'][point_id], 
                                                 next_frame_measurements['points'][point_id],

@@ -96,7 +96,7 @@ class LS_solver():
                                 num_iterations, 
                                 damping,
                                 gt, odo, landmarks,
-                                kernel_threshold = 16
+                                kernel_threshold = 25
                                 ):
         #patience system, if chi_tot stops improving we stop iterating
         patience = 5
@@ -108,10 +108,6 @@ class LS_solver():
         import tqdm
         f = open("iteration_log.txt", 'w')
         for iteration in tqdm.tqdm(range(num_iterations)):
-            #input("...")
-            log = False
-            if iteration == 39 and False:
-                log = True
             errors = defaultdict(int)
             chi_tot = 0
             H=np.zeros((system_size, system_size))
@@ -122,8 +118,6 @@ class LS_solver():
             for pose_index in Z.keys():
                 Xr=XR[pose_index, :]
                 T= cam.camera_pose_from_odometry_pose(Xr)
-                if log:
-                    f.write(f"\n\n\n POSE {pose_index}, {XR[pose_index]} \n\n {T} \n\n")
                 for landmark_index in Z[pose_index]['points'].keys():
                     z = Z[pose_index]['points'][landmark_index]
                     try:Xl=XL[landmark_index]
@@ -136,9 +130,6 @@ class LS_solver():
                     if behind:
                         #print(pose_index, landmark_index)
                         continue
-                    if log:
-                        f.write(f"{landmark_index}: z {z} , z_hat {z_hat}, error {e}, gt_l {landmarks[landmark_index]}, pred_l {Xl}\n")
-
                     #print(z, z_hat, e)
                     if z_hat[0]>(cam.width) or z_hat[1]>(cam.height):
                         #print("skipping ", landmark_index)
@@ -148,8 +139,8 @@ class LS_solver():
                     chi_tot += chi
                     w = 1
                     if (chi>kernel_threshold):
-                        #pass
-                        w = w/(kernel_threshold*10)
+                        chi = kernel_threshold
+                        w = w/(kernel_threshold*3)
                     omega = w* np.eye(2)
                     Hrr = Jr.T @ omega @ Jr
                     Hrl = Jr.T @ omega @ Jl
@@ -184,7 +175,6 @@ class LS_solver():
             H+=np.eye(system_size)*damping
             dx=np.zeros(system_size)
             print("skip/non skip: ", skipped, not_skipped)
-            if log: break  #stop before updating
             
             # we solve the linear system, blocking the first pose
             # this corresponds to "remove" from H and b the locks

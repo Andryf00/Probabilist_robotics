@@ -196,7 +196,8 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
             facecolors = 'none', edgecolors='r', label = 'pred_lm')
     plt.legend()
 
-    plt.savefig(f'plots_good/plot_{str(iteration)}.png')
+    plt.savefig(f'plots/plot_{str(iteration)}.png')
+    plt.close()
     if not animate_bool: return
 
     rotation_errors, translation_errors = compute_error(odo_array, gt_array)

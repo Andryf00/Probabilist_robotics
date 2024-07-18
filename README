@@ -1,56 +1,19 @@
-We provided, though, a ready to use dataset. It is composed by the following files:
+Triangulation 
 
-- world.dat (you need this only for evaluation)
-  It contains information about the map.
-  Every row contains:
-   LANDMARK_ID (1) POSITION (2:4)
+For each frame I iterate over all the visible points, given a point point_id, I check whether it is visible in the next frame. If that is the case, I triangulate the 2 points and obtain an esimate of the point_id real position. I check whether this estimate respects following criterias: whether the estimated position is closer from the camera than z_max, wheter this estimate is not behind the camera (z<0) and whether the reprojection error is below a fixed threshold. This way I filter out some estimations that are clearly wrong.
 
-- camera.dat
-  It contains information about the camera used to gather data:
-  - camera matrix
-  - cam_transform: pose of the camera w.r.t. robot
-  - z_near/z_far how close/far the camera can perceive stuff
-  - width/height of images
+After having done this for each frame I end up having multiple estimations for each point point_id. The final estimated position is given by the average position of all the estimates.
 
-- trajectory.dat
-  POSE_ID (1) ODOMETRY_POSE (2:4) GROUNDTRUTH_POSE (5:7)
-  the ODOMETRY_POSE is obtained by adding Gaussian Noise (0; 0.001) to the actual robot commands
+It is worth noting that I also tried to obtain estimates by triangulating points correspondaces in all the frames, and not only consecutive frames. This leads to worse estimations, I think this is because there is more noise/error accumulation between frames that are far from each other compared to consecutive frames, thus leading to worse estimates.
 
-- meas-XXXX.dat
-  Every measurement contains a sequence number, groundtruth (of the robot) and odometry pose and measurement information:
-  - point POINT_ID_CURRENT_MESUREMENT (1) ACTUAL_POINT_ID (2) IMAGE_POINT (3:4)
+Before performing BundleAdjustment I need to define the Jacobian, which I computed using the matlab script ... , and the boxPlus operation, which is quite standard (just got to make sure to properly normalize theta).
 
-  The Image_Point represents the pair [col;row] where the landmark is observed in the image
+Then I perform Bundle Adjustment. To improve robustness to outliers I perform checks similar to the ones introduced in the triangulation phase: before computing the correction dx, I skip outliers, which will greatly influence the resulting correction, by not counting the landmark estimations that, when projected on the image plane, are either behind the camera (z<0) or outside of the image plane (x>cam.width or y>cam.height). Furthermore I weight the contribution to the correction by applying a robust kernel.
 
-=====================================================================================================================
- 
-What we expect you to do in Planar Monocular SLAM?
-- get an estimate of points in the world from images correspondences (use the points id for data association) using the noisy odometry, you can achieve this in two ways:
-	- use always pair of images where correspondence appear, find correspondences, triangulate (you will have duplication of 3D points due to noise in image features, if this is the case merge same 3D points in position) 
-	- use all the correspondences from all the images, to find the set of world points that minimizes the distance among all features directions
-- once you have an initial estimate of 3D points, SE(2) poses (your odometry), you can perform Bundle Adjustment, see Total Least Squares but remember that your motion is planar
+To visualize the correctnes of the solution, for each step I plot the current estimate against the original estimate and the ground truth. This can also be visualized in a gif where the evolution of the relative error is also shown.
 
+To visualize the evolution of the triangulation remove the break statement at line 20. in main.py
 
-Evaluation of your poses:
-Evaluate your solution comparing it with the gt using the delta between poses
+I found the system to be overall very sensible to the damping and kernel_threshold parameters. The additional checks to avoid outliers are also key. 
 
-For example, suppose we these two consecutive poses
-T_0 
-T_1 
-
-- compute the relative motion rel_T = inv(T_0)*T_1
-- compute the relative gt motion rel_GT = inv(GT_0)*GT_1
-- compute the SE(2) error error_T = inv(rel_T)*rel_GT
-- rotation part:
-        - atan2(error_T(2, 1), error_T(1, 1))
-- translation part
-	- compute the RMSE on translations error_T(1:3, 4) 
-
-Evaluation of your map: 
-- compute the whole RMSE    
-
-Hints:
-- develop each component independently and use the groudtruth for testing
-- when everything is working put all together and create your Planar Monocular SLAM
-- the better will be the inital guess the better you final estimate after BA
-
+Overall the predicted solution does not converge to the ground truth, but I am not able to improve it.
