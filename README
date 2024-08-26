@@ -21,7 +21,7 @@ Then I perform Bundle Adjustment. To improve robustness to outliers I perform ch
 
 To visualize the correctnes of the solution, for each step I plot the current estimate against the original estimate and the ground truth, you can find these plots in the plot_best folder. At the end I also combined this in a gif that shows the evolution of the relative errors.
 
-![me](https://https://github.com/Andryf00/Probabilist_robotics/blob/main/plots_good/animation.gif)
+![me](https://https://github.com/Andryf00/Probabilist_robotics/blob/main/plots_best/animation.gif)
 
 Finally, I obtain an RMSE of x.
 
