@@ -8,7 +8,7 @@ import os
 
 def main():
         
-        os.mkdir('plots/')
+        os.makedirs('plots/', exist_ok = True)
 
         cam = Camera()
 
@@ -21,14 +21,16 @@ def main():
 
         # if you want to see the result of triangulation for each step uncomment break
         for frame_id in history.keys():
-            break
-            plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
+            pass
+            #plot_3d(history[frame_id]['pose'], history[frame_id]['visible_landmarks'], history[frame_id]['triangulated_points'], history[frame_id]['filtered_points'])
                 
         solver = LS_solver()
-        XR, XL = solver.doBundleAdjustment(damping=1e-11, XR=np.array(odo_traj), XL=triangulated_points, Z=measurements, cam=cam, num_poses=200, num_landmarks=1000, num_iterations=50,  gt = gt_traj,odo= odo_traj,landmarks= landmarks)
+        XR, XL = solver.doBundleAdjustment(damping=1e-12, XR=np.array(odo_traj), XL=triangulated_points, Z=measurements, cam=cam, num_poses=200, num_landmarks=1000, num_iterations=50,  gt = gt_traj,odo= odo_traj,landmarks= landmarks)
         
         err = landmark_error(landmarks, XL)
         print(f"Landmark_error: {err}")
+        _, rmse = compute_error(XR, gt_traj)
+        print(f"total RMSE: {np.sum(rmse)}")
         
         predicted_l = []
         for l in XL.keys():

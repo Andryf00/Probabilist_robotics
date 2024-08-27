@@ -234,5 +234,5 @@ def animate_trajectories(gt_array, odo_array, corrected, landmark_array, pred_la
                                 frames=len(gt_array),
                                 interval=500,
                                 blit=False)  
-    anim.save(f"animation.gif",writer='pillow',fps=20, dpi=200)
+    anim.save(f"plots/animation.gif",writer='pillow',fps=20, dpi=200)
     plt.show()

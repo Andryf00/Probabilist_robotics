@@ -2,7 +2,7 @@ import numpy as np
 from plotting import *
 
 from collections import defaultdict
-
+import tqdm
 class LS_solver():
     def __init__(self) -> None:
         self.pos_dim = 3
@@ -21,7 +21,8 @@ class LS_solver():
         s = np.sin(theta)
         c = np.cos(theta)
         return np.arctan2(s,c)
-     
+    #I computed the jacobians with a matlab script that I lost when I had to reinstall ubuntu (it was in the matlab script folder and therefore not tracked by git)
+    #Anyway I had already checked it with Omar and Lorenzo in a meeting so it should be correct
     def J_mat(self, pose, p, cam):
         x = pose[0] 
         y = pose[1]
@@ -79,12 +80,6 @@ class LS_solver():
             except: 
                 #print(dxl) it's alway 0, because if the lm is not observed there is no update
                 continue
-            if np.sum(np.abs(dxl))>10: 
-                pass
-                #print("Landmark", landmark_index, XL[landmark_index],landmarks[landmark_index], dxl, err[landmark_index])
-            else:
-                pass
-                #print("Landmark_SMALL", landmark_index, XL[landmark_index],landmarks[landmark_index], dxl, err[landmark_index])
             XL[landmark_index]+=dxl
         
         return XR, XL
@@ -105,8 +100,7 @@ class LS_solver():
         chi_min = np.inf
         # size of the linear system
         system_size=self.pos_dim*num_poses + self.l_dim*num_landmarks; 
-        import tqdm
-        f = open("iteration_log.txt", 'w')
+        
         for iteration in tqdm.tqdm(range(num_iterations)):
             errors = defaultdict(int)
             chi_tot = 0
@@ -174,7 +168,7 @@ class LS_solver():
                 break
             H+=np.eye(system_size)*damping
             dx=np.zeros(system_size)
-            print("skip/non skip: ", skipped, not_skipped)
+            #print("skip/non skip: ", skipped, not_skipped)
             
             # we solve the linear system, blocking the first pose
             # this corresponds to "remove" from H and b the locks
@@ -185,7 +179,7 @@ class LS_solver():
             predicted_l = []
             for l in XL.keys():
                 predicted_l.append(XL[l])
-            print(chi_tot)
-            animate_trajectories(gt,odo , XR, landmarks[list(XL.keys())], np.array(predicted_l), iteration)  
+            #print(chi_tot)
+            animate_trajectories(gt, odo , XR, landmarks[list(XL.keys())], np.array(predicted_l), iteration)  
    
         return XR, XL

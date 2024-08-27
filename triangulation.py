@@ -34,7 +34,7 @@ def reprojection_error(point_3d, point_2d, K, T):
     
     # Compute Euclidean distance between projected and ground truth image points
     reprojection_error = np.sqrt(np.sum((projected_point[:2] - point_2d)**2, axis=0))
-    # Return mean reprojection error
+    
     return reprojection_error
 
 def outlier(triangulated_point, point_2d, K, T, z_max):
