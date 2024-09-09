@@ -7,7 +7,7 @@ For each frame I iterate over all the visible landmark, using the given landmark
 
 Therefore, for each consecutive frame I get an estimation of the 3D position of landmarks that are visible in both frames. The following plot shows the output of the triangulation for the first 2 frames, shown in different colors are the gt landmarks, the triangulated landmarks, and the estimations that are filtered out (To visualize more of this, uncomment the plot3d statement at line 25 in main.py) . 
 
-![alt text](https://https://github.com/Andryf00/Probabilist_robotics/blob/main/media/triang.jpg?raw=true)
+![](media/triang.png)
 
 After having done this for each copule of consecutive frames I end up having multiple estimations for each landmark, which I average to obtain the final estimated position.
 
@@ -21,7 +21,7 @@ Then I perform Bundle Adjustment. To improve robustness to outliers I perform ch
 
 To visualize the correctnes of the solution, for each step I plot the current estimate against the original estimate and the ground truth, you can find these plots in the plot_best folder. At the end I also combined this in a gif that shows the evolution of the relative errors.
 
-![me](https://github.com/Andryf00/Probabilist_robotics/blob/main/plots_best/animation.gif)
+![](plots_best/animation.gif)
 
 Finally, I obtain an RMSE of 0.1988.
 
