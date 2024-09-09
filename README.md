@@ -1,4 +1,4 @@
-![alt](https://github.com/Andryf00/Probabilist_robotics/blob/main/plots_best/animation.gif)
+![](plots_best/animation.gif)
 
 
 We provided, though, a ready to use dataset. It is composed by the following files:
