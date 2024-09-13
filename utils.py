@@ -33,7 +33,7 @@ def load_measurements(trajectory = 'gt_pose'):
         points = {}
 
         try: 
-            with open(f"data/measurements/meas-{counter}.dat", "r") as f:
+            with open(f"data/meas-{counter}.dat", "r") as f:
                 for line in f:
                     splitted_line = line.split()
                     if len(splitted_line) == 0: 
